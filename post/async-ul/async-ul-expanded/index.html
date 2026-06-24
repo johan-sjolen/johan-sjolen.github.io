@@ -5,7 +5,7 @@
         async src="//gc.zgo.at/count.js"></script>
 <meta charset='utf-8'>
 <meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="TL;DR: If you are on a modern JDK (25 or newer) and perform GC log analysis, you probably want to add this startup argument:\n-Xlog:async:stall It will make all GC logging asynchronous, while guaranteeing that no messages will be dropped. The older mode, which was accessed with -Xlog:async, could potentially drop messages. This mode will instead stall producer threads to allow the output thread to catch up.\nUse -XX:AsyncLogBufferSize=N to change the buffer size, an increased buffer size helps with temporary hiccups in output speed. A complete invocation could look something like this:\n">
-<title>You should be doing this when collecting GC logs!</title>
+<title>You should be using Async UL when collecting GC logs!</title>
 
 
 <link rel="canonical" href="https://johan-sjolen.github.io/post/async-ul/async-ul-expanded/">
@@ -15,12 +15,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap">
 
 
-<link rel="stylesheet" href="/scss/style.min.e62e09c60ba428a627e03568fa3df938f6a8224f815b5846f00816c17d4a0be4.css"><meta property='og:title' content="You should be doing this when collecting GC logs!">
+<link rel="stylesheet" href="/scss/style.min.e62e09c60ba428a627e03568fa3df938f6a8224f815b5846f00816c17d4a0be4.css"><meta property='og:title' content="You should be using Async UL when collecting GC logs!">
 <meta property='og:description' content="TL;DR: If you are on a modern JDK (25 or newer) and perform GC log analysis, you probably want to add this startup argument:\n-Xlog:async:stall It will make all GC logging asynchronous, while guaranteeing that no messages will be dropped. The older mode, which was accessed with -Xlog:async, could potentially drop messages. This mode will instead stall producer threads to allow the output thread to catch up.\nUse -XX:AsyncLogBufferSize=N to change the buffer size, an increased buffer size helps with temporary hiccups in output speed. A complete invocation could look something like this:\n">
 <meta property='og:url' content='https://johan-sjolen.github.io/post/async-ul/async-ul-expanded/'>
 <meta property='og:site_name' content='Johan Sjölén&#39;s blog'>
 <meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:tag' content='ul' /><meta property='article:tag' content='jvm' /><meta property='article:tag' content='openjdk' /><meta property='article:published_time' content='2026-06-23T00:00:00&#43;00:00'/><meta property='article:modified_time' content='2026-06-23T00:00:00&#43;00:00'/>
-<meta name="twitter:title" content="You should be doing this when collecting GC logs!">
+<meta name="twitter:title" content="You should be using Async UL when collecting GC logs!">
 <meta name="twitter:description" content="TL;DR: If you are on a modern JDK (25 or newer) and perform GC log analysis, you probably want to add this startup argument:\n-Xlog:async:stall It will make all GC logging asynchronous, while guaranteeing that no messages will be dropped. The older mode, which was accessed with -Xlog:async, could potentially drop messages. This mode will instead stall producer threads to allow the output thread to catch up.\nUse -XX:AsyncLogBufferSize=N to change the buffer size, an increased buffer size helps with temporary hiccups in output speed. A complete invocation could look something like this:\n">
     </head>
     <body class="
@@ -124,7 +124,7 @@
 
     <div class="article-title-wrapper">
         <h2 class="article-title">
-            <a href="/post/async-ul/async-ul-expanded/">You should be doing this when collecting GC logs!</a>
+            <a href="/post/async-ul/async-ul-expanded/">You should be using Async UL when collecting GC logs!</a>
         </h2>
     
         

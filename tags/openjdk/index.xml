@@ -6,7 +6,7 @@
         <generator>Hugo -- gohugo.io</generator>
         <language>en-us</language>
         <lastBuildDate>Tue, 23 Jun 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://johan-sjolen.github.io/tags/openjdk/index.xml" rel="self" type="application/rss+xml" /><item>
-            <title>You should be doing this when collecting GC logs!</title>
+            <title>You should be using Async UL when collecting GC logs!</title>
             <link>https://johan-sjolen.github.io/post/async-ul/async-ul-expanded/</link>
             <pubDate>Tue, 23 Jun 2026 00:00:00 +0000</pubDate>
             <guid>https://johan-sjolen.github.io/post/async-ul/async-ul-expanded/</guid>
