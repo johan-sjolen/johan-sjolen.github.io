@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+    <head>
+        <script data-goatcounter="https://johansjolen.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content="TL;DR: If you are on a modern JDK (25 or newer) and perform GC log analysis, you probably want to add this startup argument:\n-Xlog:async:stall It will make all GC logging asynchronous, while guaranteeing that no messages will be dropped. The older mode, which was accessed with -Xlog:async, could potentially drop messages. This mode will instead stall producer threads to allow the output thread to catch up.\nUse -XX:AsyncLogBufferSize=N to change the buffer size, an increased buffer size helps with temporary hiccups in output speed. A complete invocation could look something like this:\n">
+<title>You should be doing this when collecting GC logs!</title>
+
+
+<link rel="canonical" href="https://johan-sjolen.github.io/post/async-ul/async-ul-expanded/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap">
+
+
+<link rel="stylesheet" href="/scss/style.min.e62e09c60ba428a627e03568fa3df938f6a8224f815b5846f00816c17d4a0be4.css"><meta property='og:title' content="You should be doing this when collecting GC logs!">
+<meta property='og:description' content="TL;DR: If you are on a modern JDK (25 or newer) and perform GC log analysis, you probably want to add this startup argument:\n-Xlog:async:stall It will make all GC logging asynchronous, while guaranteeing that no messages will be dropped. The older mode, which was accessed with -Xlog:async, could potentially drop messages. This mode will instead stall producer threads to allow the output thread to catch up.\nUse -XX:AsyncLogBufferSize=N to change the buffer size, an increased buffer size helps with temporary hiccups in output speed. A complete invocation could look something like this:\n">
+<meta property='og:url' content='https://johan-sjolen.github.io/post/async-ul/async-ul-expanded/'>
+<meta property='og:site_name' content='Johan Sjölén&#39;s blog'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:tag' content='ul' /><meta property='article:tag' content='jvm' /><meta property='article:tag' content='openjdk' /><meta property='article:published_time' content='2026-06-23T00:00:00&#43;00:00'/><meta property='article:modified_time' content='2026-06-23T00:00:00&#43;00:00'/>
+<meta name="twitter:title" content="You should be doing this when collecting GC logs!">
+<meta name="twitter:description" content="TL;DR: If you are on a modern JDK (25 or newer) and perform GC log analysis, you probably want to add this startup argument:\n-Xlog:async:stall It will make all GC logging asynchronous, while guaranteeing that no messages will be dropped. The older mode, which was accessed with -Xlog:async, could potentially drop messages. This mode will instead stall producer threads to allow the output thread to catch up.\nUse -XX:AsyncLogBufferSize=N to change the buffer size, an increased buffer size helps with temporary hiccups in output speed. A complete invocation could look something like this:\n">
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column compact"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="Toggle Menu">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">Johan Sjölén&#39;s blog</a></h1>
+            <h2 class="site-description">My personal bog</h2>
+        </div>
+    </header><ol class="menu" id="main-menu">
+        
+        
+        
+        <li >
+            <a href='/page/about/' >
+                
+                <span>About</span>
+            </a>
+        </li>
+        
+        <li class="menu-bottom-section">
+            <ol class="menu">
+
+                
+                    <li id="dark-mode-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                        <span>Dark Mode</span>
+                    </li>
+                
+            </ol>
+        </li>
+    </ol>
+</aside>
+
+    
+
+            <main class="main full-width">
+    <article class="main-article">
+    <header class="article-header">
+
+    <div class="article-details">
+    
+    <header class="article-category">
+        
+            
+            
+            
+            <a href="/categories/blog/" style="background-color: hsl(289, 60%, 84%); color: hsl(289, 60%, 15%);">
+                Blog
+            </a>
+        
+    </header>
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/post/async-ul/async-ul-expanded/">You should be doing this when collecting GC logs!</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    
+    
+    
+    <footer class="article-meta">
+        
+            <div class="inline-meta">
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                    <time class="article-time--published" datetime='2026-06-23T00:00:00Z'>Tuesday, June 23, 2026</time>
+                
+
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                    <time class="article-time--reading">
+                        6 minutes read
+                    </time>
+                
+            </div>
+        
+
+        
+
+        
+    </footer>
+    
+</div>
+
+</header>
+
+    
+
+    <section class="article-content">
+    
+    
+    <h2 id="tldr">TL;DR:
+</h2><p>If you are on a modern JDK (25 or newer) and perform GC log analysis, you probably want to add this startup argument:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>-Xlog:async:stall
+</span></span></code></pre></div><p>It will make all GC logging asynchronous, while guaranteeing that no messages will be dropped. The older mode, which was accessed with <code>-Xlog:async</code>, could potentially drop messages. This mode will instead stall producer threads to allow the output thread to catch up.</p>
+<p>Use <code>-XX:AsyncLogBufferSize=N</code> to change the buffer size, an increased buffer size helps with temporary hiccups in output speed. A complete invocation could look something like this:</p>
+<pre tabindex="0"><code>java -XX:AsyncLogBufferSize=8M -Xlog:async:stall -Xlog:gc*:file=gc-%p-%t.log:uptime,level,tags:filecount=5,filesize=20M
+</code></pre><p>Run <code>java -Xlog:help</code> for more information.</p>
+<h2 id="background">Background
+</h2><p>GC logs are one of those things that have become standard to enable for your Java application. You turn them on, forget about them, and then one day they are the only thing standing between you and a very annoying afternoon.</p>
+<p>Unfortunately, collecting logs is not free. The VM has to write the messages somewhere, and that work has to happen at some point. Under the default Unified Logging system (the machinery powering all VM logs, including GC), printing log messages is a fully synchronous process: The producer thread, meaning the thread that produces a log message, is also the one that outputs it. This can be extremely detrimental to pause times, as your GC must now await the log write to finish before continuing.</p>
+<p>In JDK 17, the UL system gained an asynchronous mode. Instead of making the producer thread also do the output work, the VM can enqueue the message and let a separate output thread flush it out.</p>
+<p>This is a very nice idea. The GC can go back to doing GC things, and the boring output work can happen somewhere else. In the happy case, this gives us what we want: lower disruption from the logging itself, while still getting the log file we asked for.</p>
+<p>Unfortunately, nothing is allowed to be quite that simple.</p>
+<p>The buffer used by asynchronous logging is bounded. It has to be, otherwise a sufficiently enthusiastic logging configuration could just turn memory into a sad little text warehouse. So, there is an obvious question: what happens when producer threads create messages faster than the output thread can write them?</p>
+<p>Before JDK 25, the answer was that producer threads would drop any messages that there isn&rsquo;t room for.</p>
+<p>This is not a bad answer. If you ask for non-blocking logging, then non-blocking logging is what you get. The VM keeps moving, the application keeps moving, and the output thread can catch up. For some kinds of logging this is a perfectly reasonable trade-off. For GC logs, though, this can be the wrong trade-off.</p>
+<p>If I am collecting GC logs, it is usually because I want to analyze them later. Maybe I want to understand latency. Maybe I want to compare collectors. Maybe I want to explain why some service decided to have a dramatic little moment in production. In all of these cases, having a chunk of log messages dropped because your output thread stumbled a bit can have a real impact on your analysis.</p>
+<p>I thought that we can do better, so I decided to have a look at how we can alleviate any user&rsquo;s worries regarding dropping asynchronous messages. I developed a solution which ships in JDK 25. In this release, Unified Logging gained another asynchronous mode. Instead of dropping messages when the buffer is full, it will stall all producer threads until the output thread has caught up.</p>
+<p>Now, instead of specifying <code>-Xlog:async</code> you may append a mode to the startup argument, that mode either being <code>:drop</code> or <code>:stall</code>. The new mode is <code>:stall</code>, that&rsquo;s what you want to add if you don&rsquo;t want any messages to be dropped. Plain <code>-Xlog:async</code> is still the best-effort version.</p>
+<p>This may sound like we have just reinvented synchronous logging with extra steps, but we have not. Most of the time, logging still works asynchronously. The producer thread enqueues the log message and continues. The output thread handles the slow part. The stalling only matters when the buffer fills up, which is exactly the moment where the old behavior could silently lose data.</p>
+<p>So the trade-off becomes much nicer:</p>
+<ul>
+<li>Compared with synchronous logging, most log messages do not have to pay the direct output cost.</li>
+<li>Compared with dropping asynchronous logging, the log file remains complete.</li>
+</ul>
+<p>This is what we in Sweden call a &ldquo;lagom&rdquo; solution. You get lower collection costs in the common case, and when the logging system is under pressure, you preserve the thing you actually wanted: a trustworthy log.</p>
+<p>If you already have a GC logging line, keep it. Add the async mode next to it. For example, the important part of the configuration may look like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>java -Xlog:async:stall -Xlog:gc*:file=gc-%p-%t.log:uptime,level,tags:filecount=5,filesize=20M
+</span></span></code></pre></div><p>This is not only useful on multi-core machines. On a single-core system, asynchronous logging can still be a sensible arrangement. Since the output thread can sleep while waiting for a piece of output to be written to file, it will yield and the application threads can continue doing useful work.</p>
+<h2 id="implementation-overview">Implementation overview
+</h2><p>The asynchronous logging implementation uses a ping-pong buffer design. There are two fixed-size buffers: one active buffer used by producer threads, and one flushing buffer used by the output thread from which messages are taken and written to output devices.</p>
+<p>At a high level, the normal flow looks like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>producer threads
+</span></span><span style="display:flex;"><span>   | push log message
+</span></span><span style="display:flex;"><span>   | signal: data available
+</span></span><span style="display:flex;"><span>   v
+</span></span><span style="display:flex;"><span>+-------------+       output thread wakes
+</span></span><span style="display:flex;"><span>| active      |---------------------------+
+</span></span><span style="display:flex;"><span>| buffer      |                           |
+</span></span><span style="display:flex;"><span>+-------------+                           |
+</span></span><span style="display:flex;"><span>      ^                                   |
+</span></span><span style="display:flex;"><span>      | output thread swaps buffers &lt;-----+
+</span></span><span style="display:flex;"><span>      v                                   |
+</span></span><span style="display:flex;"><span>+-------------+                           v
+</span></span><span style="display:flex;"><span>| flushing    | ----&gt; output thread writes to output devices ---&gt;
+</span></span><span style="display:flex;"><span>| buffer      |
+</span></span><span style="display:flex;"><span>+-------------+
+</span></span></code></pre></div><p>When a producer thread emits a log message, it takes a lock, appends the message to the active buffer, signals that data is available, and then continues. The output thread waits for that signal. Once there is work to do, it takes the lock, swaps the active and staging buffers, and releases the lock again. The output thread competes with the producer threads for the lock. We could have been more clever here, but we&rsquo;ve found that in practice there is no starvation, and this let&rsquo;s the buffer be filled with more than just one message before the output thread claims the locks.</p>
+<p>After the swap, the output thread writes the contents of the staging buffer. This is the central point of the design: the lock is held while buffers are exchanged, but not while log output is written. Producer threads therefore avoid waiting for the ordinary I/O path in the common case.</p>
+<p>In <code>stall</code> mode, a full active buffer is handled differently from the original dropping mode. If a message does not fit, the producer thread creates a temporary message area sized for that message, posts it for the output thread, and waits until it has been written. This prevents all other producer threads from progressing as well.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>active buffer full
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>producer thread -&gt; [ one-off waiting message ] ---&gt; output thread
+</span></span><span style="display:flex;"><span>       ^                                            |
+</span></span><span style="display:flex;"><span>       |                                            v
+</span></span><span style="display:flex;"><span>       +-------------- wake after write &lt;-----------+
+</span></span></code></pre></div><p>The output thread writes the ordinary buffer first, then writes the waiting message, and finally wakes the stalled producer thread. The result is that the common case remains asynchronous, while the full-buffer case becomes explicit waiting instead of silent message loss.</p>
+
+</section>
+
+
+    <footer class="article-meta article-footer">
+    
+    <section class="article-tags">
+        
+            <a href="/tags/ul/">Ul</a>
+        
+            <a href="/tags/jvm/">Jvm</a>
+        
+            <a href="/tags/openjdk/">Openjdk</a>
+        
+    </section>
+
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+
+        <div class="disqus-container">
+    
+</div>
+
+<style>
+    .disqus-container {
+        background-color: var(--card-background);
+        border-radius: var(--card-border-radius);
+        box-shadow: var(--shadow-l1);
+        padding: var(--card-padding);
+    }
+</style>
+
+<script>
+    window.addEventListener('onColorSchemeChange', (e) => {
+        if (typeof DISQUS == 'object') {
+            DISQUS.reset({
+                reload: true
+            });
+        }
+    })
+</script>
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2026 Johan Sjölén&#39;s blog
+    </section>
+    
+    <section class="powerby">
+        Built with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> <br />
+        Theme <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="4.0.3">Stack</a></b> designed by <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a>
+    </section>
+</footer>
+
+
+    
+
+
+
+<script type="module">
+    import gallery from '\/ts\/gallery.js';
+
+    const articleContent = document.querySelector('.article-content');
+    const shouldLoad = articleContent && (articleContent.querySelectorAll('figure').length > 0 || articleContent.querySelectorAll('img.gallery-image').length > 0);
+    
+    if (shouldLoad) {
+        gallery(articleContent);
+
+        const PhotoSwipeLightbox = (await import("https:\/\/cdn.jsdelivr.net\/npm\/photoswipe@5.4.4\/dist\/photoswipe-lightbox.esm.min.js")).default;
+        const styleHref = "https:\/\/cdn.jsdelivr.net\/npm\/photoswipe@5.4.4\/dist\/photoswipe.css";
+
+        const styleTag = document.createElement('link');
+        styleTag.rel = 'stylesheet';
+        styleTag.href = styleHref;
+        document.head.appendChild(styleTag);
+
+        const lightbox = new PhotoSwipeLightbox({
+            gallerySelector: '.article-content',
+            childSelector: 'figure a.image-link',
+            pswpModule: () => import("https:\/\/cdn.jsdelivr.net\/npm\/photoswipe@5.4.4\/dist\/photoswipe.esm.min.js")
+        });
+        lightbox.init();
+    }
+</script>
+
+    
+
+            </main>
+        </div>
+        
+<script type="text/javascript" src="/ts/main.1ff1e5fdc4e178ed422e50aa407526dc552f26342d729343fded19416194382c.js" defer></script>
+
+
+    </body>
+</html>

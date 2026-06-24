@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Pages on Johan Sjölén&#39;s blog</title>
+        <link>https://johan-sjolen.github.io/page/</link>
+        <description>Recent content in Pages on Johan Sjölén&#39;s blog</description>
+        <generator>Hugo -- gohugo.io</generator>
+        <language>en-us</language><atom:link href="https://johan-sjolen.github.io/page/index.xml" rel="self" type="application/rss+xml" /><item>
+            <title>About</title>
+            <link>https://johan-sjolen.github.io/page/about/</link>
+            <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+            <guid>https://johan-sjolen.github.io/page/about/</guid>
+            <description>&lt;p&gt;Hi, I am Johan Sjölén. I&amp;rsquo;m a software developer. I&amp;rsquo;m currently employed by Oracle and I work in the runtime team in the Java Platform Group. My title is &amp;ldquo;Senior Member of Technical Staff.&amp;rdquo; This blog contains my opinions and thoughts and do not represent those of my employer&amp;rsquo;s at all.&lt;/p&gt;&#xA;&lt;p&gt;This blog runs on Hugo, and I use GoatCounter for analytics. As far as I understand, GoatCounter saves no personally identifiable information, so you don&amp;rsquo;t have to worry about being tracked by me.&#xA;I just want to know how many hits my blog has :-).&lt;/p&gt;&#xA;&lt;p&gt;My Github account is johan-sjolen.&lt;/p&gt;&#xA;&lt;p&gt;My professional e-mail is &lt;a class=&#34;link&#34; href=&#34;mailto:johan.sjolen@oracle.com&#34; &gt;johan.sjolen@oracle.com&lt;/a&gt; &amp;ndash; feel free to reach out.&lt;/p&gt;&#xA;&lt;p&gt;I&amp;rsquo;m available on LinkedIn as well.&lt;/p&gt;&#xA;</description>
+        </item></channel>
+</rss>
